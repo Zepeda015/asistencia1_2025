@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Asistencia y Puntualidad</title>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1 {
+            color: #0056b3;
+            text-align: center;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 1000px; /* Ancho ajustado para más contenido */
+            margin: 20px auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .form-group label {
+            flex: 1;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .form-group input[type="date"],
+        .form-group input[type="time"],
+        .form-group select,
+        .form-group input[type="text"] { /* Para el campo de búsqueda de nombre */
+            flex: 2;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-left: 10px;
+        }
+        .form-group button:hover {
+            background-color: #218838;
+        }
+        .filter-section, .stats-section {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px; /* Espacio entre elementos */
+            flex-wrap: wrap; /* Permite que los elementos se envuelvan en pantallas pequeñas */
+            align-items: center;
+        }
+        .filter-section label, .stats-section label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .filter-section input[type="text"],
+        .filter-section input[type="date"] {
+            flex: none; /* Desactiva el flex de los inputs en el filtro */
+            width: auto;
+        }
+        .filter-section button {
+            background-color: #007bff;
+            margin-left: 0; /* Ajuste para los botones de filtro */
+        }
+        .filter-section button:hover {
+            background-color: #0056b3;
+        }
+        .export-button {
+            background-color: #17a2b8;
+        }
+        .export-button:hover {
+            background-color: #138496;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        table th {
+            background-color: #0056b3;
+            color: white;
+        }
+        .late {
+            color: red;
+            font-weight: bold;
+        }
+        .on-time {
+            color: green;
+            font-weight: bold;
+        }
+        .actions button {
+            background-color: #ffc107;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .actions button.delete {
+            background-color: #dc3545;
+        }
+        .actions button:hover {
+            opacity: 0.9;
+        }
+        .stats-item {
+            margin-right: 20px;
+            font-size: 1.1em;
+        }
+        .stats-item span {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Registro de Asistencia y Puntualidad</h1>
+
+        <div class="form-group">
+            <label for="empleadoNombre">Nombre del Empleado:</label>
+            <select id="empleadoNombre" required>
+                <option value="">Seleccione un empleado</option>
+                </select>
+        </div>
+        <div class="form-group">
+            <label for="fechaRegistro">Fecha:</label>
+            <input type="date" id="fechaRegistro" required>
+        </div>
+        <div class="form-group">
+            <label for="horaEntrada">Hora de Entrada:</label>
+            <input type="time" id="horaEntrada" required>
+            <button onclick="agregarRegistro()">Agregar Registro</button>
+        </div>
+
+        <hr>
+
+        <h2>Filtro de Registros</h2>
+        <div class="filter-section">
+            <label for="filtroNombre">Buscar por Nombre:</label>
+            <input type="text" id="filtroNombre" placeholder="Ej: Juan Pérez" onkeyup="aplicarFiltros()">
+
+            <label for="filtroFecha">Buscar por Fecha:</label>
+            <input type="date" id="filtroFecha" onchange="aplicarFiltros()">
+
+            <button onclick="limpiarFiltros()">Limpiar Filtros</button>
+            <button class="export-button" onclick="exportarAExcel()">Exportar a Excel</button>
+        </div>
+
+        <hr>
+
+        <h2>Estadísticas</h2>
+        <div class="stats-section">
+            <div class="stats-item">
+                Total de Incumplimientos (Tardes): <span id="totalIncumplimientos">0</span>
+            </div>
+        </div>
+
+        <hr>
+
+        <h2>Registros de Asistencia</h2>
+        <table id="tablaAsistencia">
+            <thead>
+                <tr>
+                    <th>No. Progresivo</th>
+                    <th>Nombre</th>
+                    <th>Fecha</th>
+                    <th>Hora de Entrada</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        let registros = [];
+        let contadorId = 0; // Para el número progresivo
+        const KEY_STORAGE = 'registrosAsistencia'; // Clave para localStorage
+
+        // Nombres de empleados predefinidos
+        const nombresEmpleados = [
+            "ALMA YERED SANDOVAL PERON",
+            "ESTELA ROQUE DELGADO",
+            "YANNI VLADIMIR SOLIS TORRES",
+            "ARACELI DIAZ ESTEBAN",
+            "NANCY ARLETH HERNANDEZ AGUILAR",
+            "MITLI PRESA ENCINO",
+	    "MAGDALENA DE JESUS ",
+	    "NANCY JOSEFINA ESCOBAR",
+	    "LILIANA PEREZ ESTEVES",
+	    "LAURA JANNET MONTOYA NAVA",
+	    "ESTRELLA MORENO SANTOYO",
+	    "ANA KAREN CARDENAS MORENO",
+	    "ALMA DELIA ENCAMPIRA",
+            "JESUS ZEPEDA TORRES"
+
+
+
+            // Puedes añadir más nombres aquí
+        ];
+
+        // --- Funciones de Inicialización ---
+        function cargarNombresEmpleados() {
+            const selectEmpleado = document.getElementById('empleadoNombre');
+            // Limpiar opciones existentes primero
+            selectEmpleado.innerHTML = '<option value="">Seleccione un empleado</option>';
+            nombresEmpleados.forEach(nombre => {
+                const option = document.createElement('option');
+                option.value = nombre;
+                option.textContent = nombre;
+                selectEmpleado.appendChild(option);
+            });
+        }
+
+        function cargarRegistrosDesdeStorage() {
+            const data = localStorage.getItem(KEY_STORAGE);
+            if (data) {
+                registros = JSON.parse(data);
+                // Asegurarse de que contadorId sea mayor que el ID más alto existente
+                if (registros.length > 0) {
+                    contadorId = Math.max(...registros.map(r => r.id)) + 1;
+                } else {
+                    contadorId = 1;
+                }
+            }
+            renderizarTabla();
+            actualizarEstadisticas();
+        }
+
+        // --- Funciones CRUD (Crear, Leer, Actualizar, Borrar) ---
+        function agregarRegistro() {
+            const empleadoNombre = document.getElementById('empleadoNombre').value;
+            const fechaRegistro = document.getElementById('fechaRegistro').value;
+            const horaEntrada = document.getElementById('horaEntrada').value;
+
+            if (!empleadoNombre || !fechaRegistro || !horaEntrada) {
+                alert('Por favor, complete todos los campos.');
+                return;
+            }
+
+            const nuevoRegistro = {
+                id: contadorId++, // Asigna y luego incrementa
+                nombre: empleadoNombre,
+                fecha: fechaRegistro,
+                hora: horaEntrada
+            };
+
+            registros.push(nuevoRegistro);
+            guardarRegistrosEnStorage();
+            renderizarTabla();
+            limpiarCampos();
+            actualizarEstadisticas();
+        }
+
+        function eliminarRegistro(id) {
+            registros = registros.filter(registro => registro.id !== id);
+            guardarRegistrosEnStorage();
+            renderizarTabla();
+            actualizarEstadisticas();
+        }
+
+        function editarRegistro(id) {
+            const registroAEditar = registros.find(registro => registro.id === id);
+            if (registroAEditar) {
+                document.getElementById('empleadoNombre').value = registroAEditar.nombre;
+                document.getElementById('fechaRegistro').value = registroAEditar.fecha;
+                document.getElementById('horaEntrada').value = registroAEditar.hora;
+
+                // Eliminar el registro original para que se pueda agregar uno nuevo con los datos editados
+                eliminarRegistro(id); // Esto también actualizará la tabla y el storage
+            }
+        }
+
+        // --- Funciones de Renderizado y Almacenamiento ---
+        function renderizarTabla() {
+            const tablaBody = document.querySelector('#tablaAsistencia tbody');
+            tablaBody.innerHTML = ''; // Limpiar la tabla antes de renderizar
+
+            const filtroNombre = document.getElementById('filtroNombre').value.toLowerCase();
+            const filtroFecha = document.getElementById('filtroFecha').value;
+
+            const registrosFiltrados = registros.filter(registro => {
+                const coincideNombre = registro.nombre.toLowerCase().includes(filtroNombre);
+                const coincideFecha = filtroFecha ? registro.fecha === filtroFecha : true;
+                return coincideNombre && coincideFecha;
+            });
+
+            registrosFiltrados.forEach(registro => {
+                const row = tablaBody.insertRow();
+
+                row.insertCell(0).textContent = registro.id;
+                row.insertCell(1).textContent = registro.nombre;
+                row.insertCell(2).textContent = registro.fecha;
+
+                const horaCell = row.insertCell(3);
+                const [horas, minutos] = registro.hora.split(':').map(Number);
+                const esTarde = (horas > 9) || (horas === 9 && minutos >= 11);
+
+                horaCell.textContent = registro.hora;
+                horaCell.classList.add(esTarde ? 'late' : 'on-time');
+
+                const accionesCell = row.insertCell(4);
+                accionesCell.classList.add('actions');
+
+                const botonEditar = document.createElement('button');
+                botonEditar.textContent = 'Editar';
+                botonEditar.onclick = () => editarRegistro(registro.id);
+                accionesCell.appendChild(botonEditar);
+
+                const botonEliminar = document.createElement('button');
+                botonEliminar.textContent = 'Eliminar';
+                botonEliminar.classList.add('delete');
+                botonEliminar.onclick = () => eliminarRegistro(registro.id);
+                accionesCell.appendChild(botonEliminar);
+            });
+        }
+
+        function limpiarCampos() {
+            document.getElementById('empleadoNombre').value = ''; // Limpia el select
+            document.getElementById('fechaRegistro').value = '';
+            document.getElementById('horaEntrada').value = '';
+        }
+
+        function guardarRegistrosEnStorage() {
+            localStorage.setItem(KEY_STORAGE, JSON.stringify(registros));
+        }
+
+        // --- Funciones de Filtro ---
+        function aplicarFiltros() {
+            renderizarTabla(); // La función renderizarTabla ya aplica los filtros
+            actualizarEstadisticas(); // Actualiza las estadísticas con los datos filtrados
+        }
+
+        function limpiarFiltros() {
+            document.getElementById('filtroNombre').value = '';
+            document.getElementById('filtroFecha').value = '';
+            aplicarFiltros();
+        }
+
+        // --- Funciones de Exportación a Excel ---
+        function exportarAExcel() {
+            const tabla = document.getElementById('tablaAsistencia');
+            const ws = XLSX.utils.table_to_sheet(tabla);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Asistencia");
+            XLSX.writeFile(wb, "RegistrosAsistencia.xlsx");
+        }
+
+        // --- Funciones de Estadísticas ---
+        function actualizarEstadisticas() {
+            const filtroNombre = document.getElementById('filtroNombre').value.toLowerCase();
+            const filtroFecha = document.getElementById('filtroFecha').value;
+
+            const registrosParaEstadisticas = registros.filter(registro => {
+                const coincideNombre = registro.nombre.toLowerCase().includes(filtroNombre);
+                const coincideFecha = filtroFecha ? registro.fecha === filtroFecha : true;
+                return coincideNombre && coincideFecha;
+            });
+
+            let totalIncumplimientos = 0;
+            registrosParaEstadisticas.forEach(registro => {
+                const [horas, minutos] = registro.hora.split(':').map(Number);
+                if ((horas > 9) || (horas === 9 && minutos >= 11)) {
+                    totalIncumplimientos++;
+                }
+            });
+            document.getElementById('totalIncumplimientos').textContent = totalIncumplimientos;
+        }
+
+        // --- Cargar datos al iniciar la página ---
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarNombresEmpleados();
+            cargarRegistrosDesdeStorage(); // Cargar los registros guardados
+        });
+
+    </script>
+</body>
+</html>
